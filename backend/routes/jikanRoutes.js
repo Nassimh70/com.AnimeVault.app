@@ -1,8 +1,12 @@
 const express = require('express');
-const router = express.Router();
 const JikanController = require('../controllers/jikanController');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { validate } = require('../middleware/validate');
+const { searchQuerySchema } = require('../validators/animeSchemas');
+const { searchLimiter } = require('../middleware/rateLimit');
 
-router.get('/search', asyncHandler(JikanController.search));
+const router = express.Router();
+
+router.get('/search', searchLimiter, validate(searchQuerySchema, 'query'), asyncHandler(JikanController.search));
 
 module.exports = router;

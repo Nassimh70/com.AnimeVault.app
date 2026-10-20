@@ -1,42 +1,42 @@
 /**
- * Point d'entrée du serveur AnimeVault API.
- * Initialise la base SQLite (créée automatiquement si absente), puis lance Express.
+ * Point d'entrée du serveur AnimeVault.
+ * Attend la base, applique les migrations puis écoute sur PORT.
  */
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
+const app = require('./app');
+const { env } = require('./config/env');
+const { waitForDatabase, closePool } = require('./config/database');
+const { runMigrations } = require('./db/migrate');
 
-const { initDatabase } = require('./config/database');
-const { errorHandler } = require('./middleware/errorHandler');
+let server = null;
+let shuttingDown = false;
 
-const animeRoutes = require('./routes/animeRoutes');
-const statsRoutes = require('./routes/statsRoutes');
-const exportRoutes = require('./routes/exportRoutes');
-const jikanRoutes = require('./routes/jikanRoutes');
-const uploadRoutes = require('./routes/uploadRoutes');
+async function start() {
+  try {
+    await waitForDatabase();
+    await runMigrations({ silent: true });
+    server = app.listen(env.port, () => {
+      console.log(`AnimeVault API démarrée sur http://localhost:${env.port}`);
+    });
+  } catch (error) {
+    console.error(`\n✖ Impossible de démarrer AnimeVault : ${error.message}\n`);
+    process.exit(1);
+  }
+}
 
-// 1. Initialiser la base de données (création auto des tables si besoin)
-initDatabase();
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`\nArrêt reçu (${signal}), fermeture du serveur…`);
+  if (server) {
+    await new Promise((resolve) => server.close(resolve));
+  }
+  await closePool();
+  process.exit(0);
+}
 
-const app = express();
-const PORT = process.env.PORT || 4000;
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+start();
 
-app.get('/api/health', (req, res) => res.json({ success: true, status: 'AnimeVault API opérationnelle' }));
-
-app.use('/api/animes', animeRoutes);
-app.use('/api/stats', statsRoutes);
-app.use('/api/export', exportRoutes);
-app.use('/api/jikan', jikanRoutes);
-app.use('/api/upload', uploadRoutes);
-
-app.use((req, res) => res.status(404).json({ success: false, error: 'Route introuvable.' }));
-app.use(errorHandler);
-
-app.listen(PORT, () => {
-  console.log(`🚀 AnimeVault API démarrée sur http://localhost:${PORT}`);
-});
+module.exports = { start };

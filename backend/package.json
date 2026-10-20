@@ -13,7 +13,7 @@
     "dev": "node --watch server.js",
     "db:migrate": "node db/migrate.js",
     "db:import-json": "node db/import-json.js",
-    "test": "cross-env NODE_ENV=test DB_NAME=animevault_test node --test --test-concurrency=1 tests/"
+    "test": "cross-env NODE_ENV=test DB_NAME=animevault_test node --test --test-concurrency=1 \"tests/*.test.js\""
   },
   "dependencies": {
     "compression": "^1.8.2",
