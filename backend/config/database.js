@@ -1,74 +1,124 @@
 /**
- * Stockage JSON persistant pour éviter les dépendances natives sur Windows.
- * Les données restent sur disque dans database.json.
+ * Pool MySQL (mysql2/promise) et helpers de transaction.
+ * Toute la configuration de connexion est centralisée ici.
  */
-const fs = require('fs');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+const mysql = require('mysql2/promise');
+const { env } = require('./env');
 
-const DB_PATH = path.join(__dirname, '..', 'database.json');
-const UPLOADS_PATH = path.join(__dirname, '..', 'uploads');
+let pool = null;
 
-const DEFAULT_STATE = {
-  animes: [],
-  history: [],
-  settings: {},
+const POOL_OPTIONS = {
+  host: env.db.host,
+  port: env.db.port,
+  user: env.db.user,
+  password: env.db.password,
+  database: env.db.name,
+  waitForConnections: true,
+  connectionLimit: 10,
+  maxIdle: 10,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+  charset: 'utf8mb4',
+  timezone: 'Z',
+  dateStrings: ['DATE'],
+  decimalNumbers: true,
 };
 
-function clone(value) {
-  return JSON.parse(JSON.stringify(value));
+function getPool() {
+  if (!pool) {
+    pool = mysql.createPool(POOL_OPTIONS);
+  }
+  return pool;
 }
 
-function normalizeAnimeRecord(anime) {
-  if (!anime || typeof anime !== 'object') return anime;
-  return {
-    ...anime,
-    id: anime.id || uuidv4(),
-  };
+async function query(sql, params = []) {
+  const [rows] = await getPool().query(sql, params);
+  return rows;
 }
 
-function readState() {
+async function execute(sql, params = []) {
+  const [result] = await getPool().execute(sql, params);
+  return result;
+}
+
+/**
+ * Exécute une fonction dans une transaction. Commit si succès, rollback sinon.
+ * La connexion est toujours rendue au pool.
+ */
+async function withTransaction(fn) {
+  const connection = await getPool().getConnection();
   try {
-    const raw = fs.readFileSync(DB_PATH, 'utf8');
-    const parsed = JSON.parse(raw);
-    return {
-      animes: Array.isArray(parsed.animes) ? parsed.animes.map(normalizeAnimeRecord) : [],
-      history: Array.isArray(parsed.history) ? parsed.history : [],
-      settings: parsed.settings && typeof parsed.settings === 'object' ? parsed.settings : {},
-    };
-  } catch {
-    return clone(DEFAULT_STATE);
+    await connection.beginTransaction();
+    const result = await fn(connection);
+    await connection.commit();
+    return result;
+  } catch (error) {
+    try {
+      await connection.rollback();
+    } catch {
+      // Le rollback peut échouer si la connexion est déjà fermée ; l'erreur
+      // d'origine reste prioritaire.
+    }
+    throw error;
+  } finally {
+    connection.release();
   }
 }
 
-let state = readState();
-
-function writeState(nextState) {
-  state = {
-    animes: Array.isArray(nextState.animes) ? nextState.animes.map(normalizeAnimeRecord) : [],
-    history: Array.isArray(nextState.history) ? nextState.history : [],
-    settings: nextState.settings && typeof nextState.settings === 'object' ? nextState.settings : {},
-  };
-  fs.writeFileSync(DB_PATH, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
-}
-
-function initDatabase() {
-  if (!fs.existsSync(UPLOADS_PATH)) {
-    fs.mkdirSync(UPLOADS_PATH, { recursive: true });
+function describeConnectionError(error) {
+  const details = `hôte ${env.db.host}:${env.db.port}, base « ${env.db.name} », utilisateur « ${env.db.user} »`;
+  if (error && ['ECONNREFUSED', 'ETIMEDOUT', 'EHOSTUNREACH', 'ENOTFOUND'].includes(error.code)) {
+    return `Base de données injoignable (${details}). Vérifie que MySQL/MariaDB est démarré.`;
   }
+  if (error && ['ER_ACCESS_DENIED_ERROR', 'ER_DBACCESS_DENIED_ERROR'].includes(error.code)) {
+    return `Accès refusé à la base (${details}). Vérifie DB_USER et DB_PASSWORD dans backend/.env.`;
+  }
+  if (error && error.code === 'ER_BAD_DB_ERROR') {
+    return `La base « ${env.db.name} » n'existe pas (${details}). Lance npm run db:migrate ou crée-la dans phpMyAdmin.`;
+  }
+  return `Connexion à la base impossible (${details}) : ${error.message}`;
+}
 
-  if (!fs.existsSync(DB_PATH)) {
-    writeState(clone(DEFAULT_STATE));
-    console.log('✅ Nouvelle base JSON créée avec succès :', DB_PATH);
-  } else {
-    state = readState();
-    writeState(state);
-    console.log('✅ Base JSON existante chargée :', DB_PATH);
+/**
+ * Attend que la base réponde, avec un back-off exponentiel.
+ * Utilisé au démarrage du serveur et par le runner de migrations.
+ */
+async function waitForDatabase({ retries = 5 } = {}) {
+  let lastError;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      await getPool().query('SELECT 1');
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, 2 ** (attempt - 1) * 1000));
+      }
+    }
+  }
+  throw new Error(describeConnectionError(lastError));
+}
+
+async function ping() {
+  await getPool().query('SELECT 1');
+}
+
+async function closePool() {
+  if (pool) {
+    await pool.end();
+    pool = null;
   }
 }
 
-function getState() {
-  return state;
-}
-
-module.exports = { initDatabase, getState, writeState, DB_PATH };
+module.exports = {
+  POOL_OPTIONS,
+  getPool,
+  query,
+  execute,
+  withTransaction,
+  waitForDatabase,
+  describeConnectionError,
+  ping,
+  closePool,
+};
