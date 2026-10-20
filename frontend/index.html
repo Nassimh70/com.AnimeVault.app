@@ -1,17 +1,42 @@
 <!doctype html>
-<html lang="fr" class="dark">
+<html lang="fr" data-theme="dark" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AnimeVault</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/images/LogoNav.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <meta
+      name="description"
+      content="Anime Vault, la bibliothèque privée pour suivre ses animes, sa progression et ses statistiques."
+    />
+    <meta name="theme-color" content="#090c14" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Anime Vault — Bibliothèque privée</title>
+    <script>
+      (() => {
+        try {
+          const stored = localStorage.getItem('animevault.theme');
+          let mode = stored || 'system';
+          try {
+            const parsed = JSON.parse(mode);
+            if (typeof parsed === 'string') mode = parsed;
+          } catch {
+            /* Valeur stockée brute, déjà exploitable. */
+          }
+          const dark =
+            mode === 'dark' ||
+            (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+          document.documentElement.classList.toggle('dark', dark);
+          document
+            .querySelector('meta[name="theme-color"]')
+            ?.setAttribute('content', dark ? '#090c14' : '#f6f2e9');
+        } catch {
+          /* Le thème sombre reste le choix par défaut. */
+        }
+      })();
+    </script>
   </head>
-  <body class="bg-bg text-text-primary antialiased">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>

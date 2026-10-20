@@ -558,6 +558,20 @@ describe('API AnimeVault — animes, progression, favoris, historique', () => {
       assert.ok(stats.lastAdded);
     });
 
+    it('gère un visionnage supérieur au total sans erreur SQL', async () => {
+      await createAnime({
+        title: 'Dépassement',
+        status: 'termine',
+        episodesTotal: 13,
+        episodesWatched: 15,
+        episodeDuration: 24,
+      });
+
+      const response = await request(app).get('/api/stats');
+      assert.equal(response.status, 200);
+      assert.equal(response.body.data.remainingEpisodes, 0);
+    });
+
     it('filtre l’historique par anime et par limite', async () => {
       const anime = await createAnime({ title: 'Historique' });
       await request(app).patch(`/api/animes/${anime.id}/progress`).send({ direction: 'increment' });

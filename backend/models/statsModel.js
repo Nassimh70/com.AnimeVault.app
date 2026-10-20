@@ -18,8 +18,8 @@ async function globalCounts(conn) {
       COALESCE(SUM(status = 'abandonne'), 0) AS abandonne,
       COALESCE(SUM(episodes_watched), 0) AS totalEpisodesWatched,
       COALESCE(SUM(episodes_watched * episode_duration), 0) AS totalMinutesWatched,
-      COALESCE(SUM(GREATEST(episodes_total - episodes_watched, 0)), 0) AS remainingEpisodes,
-      COALESCE(SUM(GREATEST(episodes_total - episodes_watched, 0) * episode_duration), 0) AS remainingMinutes,
+      COALESCE(SUM(GREATEST(CAST(episodes_total AS SIGNED) - CAST(episodes_watched AS SIGNED), 0)), 0) AS remainingEpisodes,
+      COALESCE(SUM(GREATEST(CAST(episodes_total AS SIGNED) - CAST(episodes_watched AS SIGNED), 0) * episode_duration), 0) AS remainingMinutes,
       COALESCE(SUM(is_favorite = 1), 0) AS favoriteCount
     FROM animes
   `);

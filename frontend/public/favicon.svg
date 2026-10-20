@@ -1,13 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AnimeVault">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#2DD4BF"/>
-      <stop offset="1" stop-color="#0EA5E9"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="14" fill="#0A0C16"/>
-  <rect x="2" y="2" width="60" height="60" rx="12" fill="none" stroke="url(#g)" stroke-opacity=".55" stroke-width="2"/>
-  <path d="M22 18h20a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4H22a4 4 0 0 1-4-4V22a4 4 0 0 1 4-4z" fill="url(#g)" fill-opacity=".18"/>
-  <path d="M27 23.5v17l15-8.5z" fill="url(#g)"/>
-  <path d="M20 14v6M44 14v6" stroke="#F4F6FB" stroke-width="2.5" stroke-linecap="round" stroke-opacity=".7"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Anime Vault">
+  <rect width="64" height="64" rx="14" fill="#090c14"/>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="12.5" fill="none" stroke="#e8b86d" stroke-opacity=".38" stroke-width="1.5"/>
+  <path d="M13 19.5c6.5-2.2 13-1.1 19 2.7v24c-6-3.8-12.5-4.9-19-2.7v-24Z" fill="#e8b86d"/>
+  <path d="M51 19.5c-6.5-2.2-13-1.1-19 2.7v24c6-3.8 12.5-4.9 19-2.7v-24Z" fill="#f6ca85"/>
+  <path d="M32 22.8v23" stroke="#090c14" stroke-width="2" stroke-linecap="round" opacity=".45"/>
+  <path d="M21 26.5c2.8-.7 5.6-.4 8.2.8M21 32c2.8-.7 5.6-.4 8.2.8" stroke="#090c14" stroke-width="1.6" stroke-linecap="round" opacity=".3"/>
 </svg>
