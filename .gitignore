@@ -1,0 +1,37 @@
+# Dépendances
+node_modules/
+
+# Build
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# Environnement
+.env
+.env.local
+.env.*.local
+
+# Journaux
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Éditeurs / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Sauvegardes de données locales
+backend/backups/
+
+# Fichiers de test générés
+coverage/
+frontend/playwright-report/
+frontend/test-results/
+
+# Uploads utilisateur (conservés localement, jamais versionnés)
+backend/uploads/*
+!backend/uploads/.gitkeep
